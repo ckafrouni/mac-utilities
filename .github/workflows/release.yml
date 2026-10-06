@@ -2,11 +2,16 @@ name: Release
 
 # Releases one utility: Actions → Release → Run workflow, or
 #   gh workflow run release.yml -f utility=Calipers -f bump=patch
+# or push its tag to release that commit:
+#   git tag calipers-v1.0.0 && git push origin calipers-v1.0.0
 # It builds main's HEAD, signs it with the Developer ID, notarizes it and
 # publishes a GitHub Release tagged <id>-vX.Y.Z with <Name>.dmg (to install)
 # and <Name>.zip (what installed apps download to update).
 
 on:
+  push:
+    tags:
+      - "*-v*.*.*"
   workflow_dispatch:
     inputs:
       utility:
@@ -25,7 +30,7 @@ on:
         type: string
 
 concurrency:
-  group: release-${{ inputs.utility }}
+  group: release-${{ inputs.utility || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -33,12 +38,12 @@ permissions:
 
 jobs:
   release:
-    name: Release ${{ inputs.utility }}
+    name: Release ${{ inputs.utility || github.ref_name }}
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - name: Only from the default branch
-        if: github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        if: github.event_name == 'workflow_dispatch' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
         run: |
           echo "::error::Release from ${{ github.event.repository.default_branch }}, not ${{ github.ref }}."
           exit 1
@@ -48,14 +53,28 @@ jobs:
           fetch-depth: 0
 
       - id: meta
-        name: Resolve version
+        name: Resolve utility and version
         env:
           UTILITY: ${{ inputs.utility }}
           BUMP: ${{ inputs.bump }}
           VERSION: ${{ inputs.version }}
+          TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
         run: |
           set -euo pipefail
+          if [[ -n "$TAG" ]]; then
+            # <id>-vX.Y.Z: the utility whose lowercased name is <id>, at that version.
+            id="${TAG%-v*}"
+            VERSION="${TAG##*-v}"
+            UTILITY=""
+            for dir in Utilities/*/; do
+              dir="$(basename "$dir")"
+              if [[ "$(echo "$dir" | tr '[:upper:]' '[:lower:]')" == "$id" ]]; then UTILITY="$dir"; fi
+            done
+            [[ -n "$UTILITY" ]] || { echo "::error::No utility for tag $TAG"; exit 1; }
+            git tag -d "$TAG" >/dev/null  # so next-version.sh doesn't see it as released already
+          fi
           [[ -f "Utilities/$UTILITY/Info.plist" ]] || { echo "::error::No utility at Utilities/$UTILITY"; exit 1; }
+          echo "utility=$UTILITY" | tee -a "$GITHUB_OUTPUT"
           scripts/next-version.sh "$UTILITY" "$BUMP" "$VERSION" | tee -a "$GITHUB_OUTPUT"
 
       - name: Import the Developer ID certificate
@@ -77,7 +96,7 @@ jobs:
 
       - name: Build, sign and notarize
         env:
-          UTILITY: ${{ inputs.utility }}
+          UTILITY: ${{ steps.meta.outputs.utility }}
           VERSION: ${{ steps.meta.outputs.version }}
           APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -91,7 +110,7 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          UTILITY: ${{ inputs.utility }}
+          UTILITY: ${{ steps.meta.outputs.utility }}
           VERSION: ${{ steps.meta.outputs.version }}
           TAG: ${{ steps.meta.outputs.tag }}
           PREVIOUS_TAG: ${{ steps.meta.outputs.previous_tag }}

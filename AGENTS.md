@@ -7,12 +7,13 @@ running, building and releasing.
 
 - `Utilities/<Name>/`: one app. `Sources/` is its executable target (found by `Package.swift`
   on its own; no manifest edits), `Info.plist` its bundle (`LSUIElement`, bundle ID
-  `com.ckafrouni.<id>`), `README.md` what it does, `Resources/` (optional) copied into the bundle.
+  `com.ckafrouni.<id>`), `README.md` what it does, `Resources/` copied into the bundle (`AppIcon.icns`, drawn by
+  `scripts/make-icon.swift`).
 - `Shared/UtilityKit/`: what every utility shares: `UtilityApp` (`run`: the status item and its
   menu, with Check for Updates, Open at Login and Quit; `runInBackground`: no icon, reached by
   shortcut, opens at login and updates itself), `HotKey` (global shortcuts, Carbon, no
   Accessibility permission), `LoginItem`, `Updater` (GitHub Releases of this repo).
-- `scripts/`: `run.sh` (dev), `build-app.sh` (bundle, sign, notarize), `new-utility.sh`,
+- `scripts/`: `run.sh` (dev), `build-app.sh` (bundle, sign, notarize), `new-utility.sh`, `make-icon.swift`,
   `next-version.sh` (release tags).
 - `.github/workflows/`: `ci.yml` builds every utility; `release.yml` releases one.
 

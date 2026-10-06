@@ -19,7 +19,8 @@ Needs Xcode (Swift 6) on macOS 14 or later.
 
 ```sh
 scripts/run.sh Calipers          # debug build, (re)started from build/Calipers.app
-scripts/new-utility.sh Stopwatch timer   # a new utility, with an SF Symbol for its menu bar icon
+scripts/new-utility.sh Stopwatch timer 34C759   # a new utility: SF Symbol for its icons, icon color
+swift scripts/make-icon.swift Calipers ruler.fill FF3373 -45   # redraw an app icon
 scripts/build-app.sh Calipers    # universal release build, ad hoc signed
 ```
 
@@ -33,7 +34,10 @@ From `main`: Actions → Release → Run workflow, or
 
 ```sh
 gh workflow run release.yml -f utility=Calipers -f bump=patch   # or -f version=1.0.0
+git tag calipers-v1.0.0 && git push origin calipers-v1.0.0     # or release a tagged commit
 ```
+
+Releases are built by GitHub Actions, never on a Mac.
 
 The workflow builds a universal app, signs it with the Developer ID, notarizes and staples it,
 and publishes a GitHub Release tagged `<id>-vX.Y.Z` (`calipers-v0.1.0`) with `<Name>.dmg` to
