@@ -3,9 +3,9 @@
 Measure anything on screen, like [PixelSnap](https://pixelsnap.com). Works across every
 display, at each one's own resolution.
 
-- **⌘⇧6**: start measuring. Again, or **Esc**, to stop. Opening the app does the same.
+- **⌘⇧1**: start measuring. Again, or **Esc**, to stop. Opening the app does the same.
 - **Move**: the distance between the nearest edges around the cursor, across and down.
-- **Drag**: a box that snaps to what's inside it. Hold **Option** to keep it as drawn.
+- **Drag**: a box, exactly as you draw it. Hold **Option** as you let go to snap it to what's inside.
 - **Click** or **⌘C**: copy the measurement (the last box, or the one at the cursor).
 - **Delete**: remove the last box. **Right-click**: stop. **⌘Q**: quit Calipers.
 

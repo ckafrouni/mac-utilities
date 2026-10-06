@@ -5,7 +5,7 @@ import UtilityKit
 /// a capture of each taken as it opens.
 ///
 /// - Move: the distance between the nearest edges around the cursor.
-/// - Drag: a box, snapped to what's inside it (hold Option not to snap).
+/// - Drag: a box, as drawn. Hold Option to snap it to what's inside it.
 /// - Click: copy the measurement. ⌘C copies too; Delete removes the last box; Esc quits.
 @MainActor
 final class Overlay {
@@ -109,19 +109,19 @@ final class Overlay {
     dragStart = mouse
   }
 
-  func mouseUp(option: Bool) {
+  func mouseUp(snap: Bool) {
     mouse = NSEvent.mouseLocation
     guard let start = dragStart else { return }
     dragStart = nil
     let rect = Self.rect(start, mouse)
     if rect.width < 2 && rect.height < 2 {
       copy()
-    } else if option {
-      boxes.append(rect)
-    } else {
+    } else if snap {
       // Snap on the display that holds the box; one that spans two stays as drawn.
       let image = views.map(\.image).first { $0.frame.contains(rect) }
       boxes.append(image?.snap(rect, background: start) ?? rect)
+    } else {
+      boxes.append(rect)
     }
     redraw()
   }
@@ -242,7 +242,7 @@ final class OverlayView: NSView {
   override func mouseMoved(with event: NSEvent) { overlay.mouseMoved() }
   override func mouseDown(with event: NSEvent) { overlay.mouseDown() }
   override func mouseDragged(with event: NSEvent) { overlay.mouseMoved() }
-  override func mouseUp(with event: NSEvent) { overlay.mouseUp(option: event.modifierFlags.contains(.option)) }
+  override func mouseUp(with event: NSEvent) { overlay.mouseUp(snap: event.modifierFlags.contains(.option)) }
   override func rightMouseDown(with event: NSEvent) { overlay.close() }
 
   /// Global points to this view's.
