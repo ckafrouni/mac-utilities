@@ -92,9 +92,11 @@ final class Overlay {
 
   // MARK: Input
 
-  func mouseMoved() {
+  // Points are where each event happened: the cursor may be well past it by
+  // the time it's handled (a fast drag would start late and come out short).
+  func mouseMoved(to point: CGPoint) {
     let old = mouse
-    mouse = NSEvent.mouseLocation
+    mouse = point
     if dragStart != nil {
       redraw()
     } else {
@@ -104,13 +106,13 @@ final class Overlay {
     }
   }
 
-  func mouseDown() {
-    mouse = NSEvent.mouseLocation
+  func mouseDown(at point: CGPoint) {
+    mouse = point
     dragStart = mouse
   }
 
-  func mouseUp(snap: Bool) {
-    mouse = NSEvent.mouseLocation
+  func mouseUp(at point: CGPoint, snap: Bool) {
+    mouse = point
     guard let start = dragStart else { return }
     dragStart = nil
     let rect = Self.rect(start, mouse)
@@ -239,10 +241,17 @@ final class OverlayView: NSView {
   required init?(coder: NSCoder) { fatalError() }
 
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-  override func mouseMoved(with event: NSEvent) { overlay.mouseMoved() }
-  override func mouseDown(with event: NSEvent) { overlay.mouseDown() }
-  override func mouseDragged(with event: NSEvent) { overlay.mouseMoved() }
-  override func mouseUp(with event: NSEvent) { overlay.mouseUp(snap: event.modifierFlags.contains(.option)) }
+  override func mouseMoved(with event: NSEvent) { overlay.mouseMoved(to: global(event)) }
+  override func mouseDown(with event: NSEvent) { overlay.mouseDown(at: global(event)) }
+  override func mouseDragged(with event: NSEvent) { overlay.mouseMoved(to: global(event)) }
+  override func mouseUp(with event: NSEvent) {
+    overlay.mouseUp(at: global(event), snap: event.modifierFlags.contains(.option))
+  }
+
+  /// Where the event happened, in global points (drags keep coming here past this display's edge).
+  private func global(_ event: NSEvent) -> CGPoint {
+    window?.convertPoint(toScreen: event.locationInWindow) ?? NSEvent.mouseLocation
+  }
   override func rightMouseDown(with event: NSEvent) { overlay.close() }
 
   /// Global points to this view's.
