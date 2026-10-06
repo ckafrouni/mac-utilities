@@ -9,8 +9,8 @@ updated on its own, built from one Swift package.
 
 ## Install
 
-Download `<Name>.zip` from the utility's latest [release](https://github.com/ckafrouni/mac-utilities/releases),
-unzip it and move the app to Applications. Apps are signed and notarized, and update themselves
+Download `<Name>.dmg` from the utility's latest [release](https://github.com/ckafrouni/mac-utilities/releases),
+open it and drag the app to Applications. Apps are signed and notarized, and update themselves
 (apps with a menu show "Update to X.Y.Z…"; the others install it on their own).
 
 ## Develop
@@ -36,7 +36,8 @@ gh workflow run release.yml -f utility=Calipers -f bump=patch   # or -f version=
 ```
 
 The workflow builds a universal app, signs it with the Developer ID, notarizes and staples it,
-and publishes a GitHub Release tagged `<id>-vX.Y.Z` (`calipers-v0.1.0`) with `<Name>.zip`. A
+and publishes a GitHub Release tagged `<id>-vX.Y.Z` (`calipers-v0.1.0`) with `<Name>.dmg` to
+install from and `<Name>.zip`, which installed copies update from. A
 utility's first release is 0.1.0. Installed copies check the releases at launch and every 6
 hours.
 

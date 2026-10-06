@@ -3,8 +3,8 @@ name: Release
 # Releases one utility: Actions → Release → Run workflow, or
 #   gh workflow run release.yml -f utility=Calipers -f bump=patch
 # It builds main's HEAD, signs it with the Developer ID, notarizes it and
-# publishes a GitHub Release tagged <id>-vX.Y.Z with <Name>.zip, which the
-# installed app finds and offers as an update.
+# publishes a GitHub Release tagged <id>-vX.Y.Z with <Name>.dmg (to install)
+# and <Name>.zip (what installed apps download to update).
 
 on:
   workflow_dispatch:
@@ -99,4 +99,4 @@ jobs:
           set -euo pipefail
           args=(--target "$GITHUB_SHA" --title "$UTILITY $VERSION" --generate-notes --latest=false)
           if [[ -n "$PREVIOUS_TAG" ]]; then args+=(--notes-start-tag "$PREVIOUS_TAG"); fi
-          gh release create "$TAG" "build/$UTILITY.zip" "${args[@]}"
+          gh release create "$TAG" "build/$UTILITY.dmg" "build/$UTILITY.zip" "${args[@]}"

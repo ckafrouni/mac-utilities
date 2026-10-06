@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Utilities/<Name> into build/<Name>.app and build/<Name>.zip.
+# Builds Utilities/<Name> into build/<Name>.app, build/<Name>.dmg and build/<Name>.zip.
 #
 #   scripts/build-app.sh <Name>                    universal release build, ad hoc signed
 #   scripts/build-app.sh <Name> --dev              debug build as <bundle id>.dev, signed with your
@@ -38,7 +38,7 @@ else
   bin="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/$name"
 fi
 
-rm -rf "$app" "$zip"
+rm -rf "$app" "$zip" "build/$name.dmg"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/$name"
 cp "$dir/Info.plist" "$plist"
@@ -64,17 +64,29 @@ case $mode in
     ;;
 esac
 codesign --verify --strict "$app"
-ditto -c -k --keepParent "$app" "$zip"
+
+# A DMG to install from (the app beside an Applications link), and the zip the updater downloads.
+dmg="build/$name.dmg"
+staging="build/dmg-$name"
+rm -rf "$dmg" "$staging"
+mkdir -p "$staging"
+cp -R "$app" "$staging/"
+ln -s /Applications "$staging/Applications"
+hdiutil create -quiet -volname "$name" -srcfolder "$staging" -fs HFS+ -format UDZO -ov "$dmg"
+rm -rf "$staging"
 
 if [[ $mode == release ]]; then
+  codesign --force --timestamp --sign "$identity" "$dmg"
   key_id="${APPLE_API_KEY_ID:-WJLY8WGR4C}"
   key="${APPLE_API_KEY:-$HOME/.otter-mail/signing/AuthKey_$key_id.p8}"
   issuer="${APPLE_API_ISSUER:-b010c56a-fe59-481d-a7db-7350e51eb8b8}"
-  xcrun notarytool submit "$zip" --key "$key" --key-id "$key_id" --issuer "$issuer" --wait
+  # Notarizing the DMG covers the app in it too: staple the ticket to both.
+  xcrun notarytool submit "$dmg" --key "$key" --key-id "$key_id" --issuer "$issuer" --wait
+  xcrun stapler staple "$dmg"
   xcrun stapler staple "$app"
-  rm "$zip"
-  ditto -c -k --keepParent "$app" "$zip"
   spctl --assess --type execute --verbose "$app"
+  spctl --assess --type open --context context:primary-signature --verbose "$dmg"
 fi
+ditto -c -k --keepParent "$app" "$zip"
 
 echo "Built $app ($version)"
