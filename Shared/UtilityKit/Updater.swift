@@ -4,7 +4,8 @@ import Security
 /// Updates from this repository's GitHub Releases. Each utility is released
 /// on its own as `<id>-vX.Y.Z` with a notarized `<Name>.zip`; `<id>` is the
 /// app's `UtilityID` (its lowercased name, set by scripts/build-app.sh).
-/// Development builds (version 0.0.0) don't update.
+/// Development builds (version 0.0.0) don't update. Apps without a menu
+/// install updates by themselves, while they're not in use.
 @MainActor
 public final class Updater {
   public static let shared = Updater()
@@ -16,14 +17,16 @@ public final class Updater {
 
   public private(set) var available: Update?
   private var installing = false
+  private var automatic = false
   private let releasesURL = URL(string: "https://api.github.com/repos/ckafrouni/mac-utilities/releases?per_page=100")!
 
   private var utilityID: String? { Bundle.main.object(forInfoDictionaryKey: "UtilityID") as? String }
 
   public var isEnabled: Bool { utilityID != nil && UtilityApp.version != "0.0.0" }
 
-  func start() {
+  func start(automatic: Bool = false) {
     guard isEnabled else { return }
+    self.automatic = automatic
     check()
     Timer.scheduledTimer(withTimeInterval: 6 * 60 * 60, repeats: true) { _ in
       MainActor.assumeIsolated { Updater.shared.check() }
@@ -34,6 +37,8 @@ public final class Updater {
     Task {
       do {
         available = try await latest()
+        // Active means it's on screen being used; it tries again at the next check.
+        if automatic, available != nil, !NSApp.isActive { install(quietly: true) }
         guard userInitiated else { return }
         if let available {
           if UtilityApp.alert("\(UtilityApp.name) \(available.version) is available", "You have \(UtilityApp.version).", buttons: ["Update", "Later"]) == 0 {
@@ -80,7 +85,7 @@ public final class Updater {
 
   /// Downloads the update, checks it's signed by the same team as this app,
   /// swaps it in once this process has quit and opens it.
-  public func install() {
+  public func install(quietly: Bool = false) {
     guard let update = available, !installing else { return }
     installing = true
     Task {
@@ -104,6 +109,7 @@ public final class Updater {
         try swap.run()
         NSApp.terminate(nil)
       } catch {
+        if quietly { NSLog("Couldn't update: \(error)"); return }
         UtilityApp.alert("Couldn't update \(UtilityApp.name)", error.localizedDescription)
       }
     }

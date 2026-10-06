@@ -176,7 +176,11 @@ final class Overlay {
 
   private func hasScreenRecordingPermission() -> Bool {
     if CGPreflightScreenCaptureAccess() { return true }
-    if CGRequestScreenCaptureAccess() { return true }
+    // The first time, macOS asks on its own; after that, point the way to Settings.
+    if !UserDefaults.standard.bool(forKey: "askedForScreenRecording") {
+      UserDefaults.standard.set(true, forKey: "askedForScreenRecording")
+      return CGRequestScreenCaptureAccess()
+    }
     let choice = UtilityApp.alert(
       "Calipers needs to see your screen",
       "Allow Calipers in System Settings → Privacy & Security → Screen & System Audio Recording, then try again. It measures what's on screen; nothing leaves your Mac.",

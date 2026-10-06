@@ -2,9 +2,10 @@ import AppKit
 
 /// A menu bar app: an icon in the status bar whose menu holds the utility's
 /// items, then the ones every utility has (updates, Open at Login, Quit).
+/// Or, with `runInBackground`, no icon at all: a shortcut is the only way in.
 @MainActor
 public enum UtilityApp {
-  private static var delegate: Delegate?
+  private static var delegate: NSApplicationDelegate?
 
   /// Starts the app and never returns. `items` is called each time the menu opens.
   public static func run(
@@ -14,6 +15,23 @@ public enum UtilityApp {
   ) -> Never {
     let app = NSApplication.shared
     let delegate = Delegate(symbol: symbol, items: items, onLaunch: onLaunch)
+    self.delegate = delegate
+    app.delegate = delegate
+    app.setActivationPolicy(.accessory)
+    app.run()
+    exit(0)
+  }
+
+  /// Starts an app with no icon or menu, like the screenshot tool: it's reached
+  /// by its shortcuts, and opening the app again (Finder, Spotlight) calls
+  /// `onOpen`. It opens at login (added once, on its first launch) and installs
+  /// updates by itself. ⌘Q in its own UI is how it quits.
+  public static func runInBackground(
+    onLaunch: @escaping @MainActor () -> Void,
+    onOpen: @escaping @MainActor () -> Void
+  ) -> Never {
+    let app = NSApplication.shared
+    let delegate = BackgroundDelegate(onLaunch: onLaunch, onOpen: onOpen)
     self.delegate = delegate
     app.delegate = delegate
     app.setActivationPolicy(.accessory)
@@ -59,6 +77,32 @@ public enum UtilityApp {
 private final class ActionMenuItem: NSMenuItem {
   var handler: (@MainActor () -> Void)?
   @objc func fire() { handler?() }
+}
+
+@MainActor
+private final class BackgroundDelegate: NSObject, NSApplicationDelegate {
+  let onLaunch: @MainActor () -> Void
+  let onOpen: @MainActor () -> Void
+
+  init(onLaunch: @escaping @MainActor () -> Void, onOpen: @escaping @MainActor () -> Void) {
+    self.onLaunch = onLaunch
+    self.onOpen = onOpen
+  }
+
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    // Released builds only: a dev build in build/ shouldn't become a login item.
+    if Updater.shared.isEnabled, !UserDefaults.standard.bool(forKey: "addedLoginItem") {
+      UserDefaults.standard.set(true, forKey: "addedLoginItem")
+      if !LoginItem.isEnabled { LoginItem.toggle() }
+    }
+    Updater.shared.start(automatic: true)
+    onLaunch()
+  }
+
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    onOpen()
+    return false
+  }
 }
 
 @MainActor

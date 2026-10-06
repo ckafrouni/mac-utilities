@@ -1,6 +1,6 @@
 # mac-utilities
 
-Small, single-purpose Mac apps that live in the menu bar. Each is its own app, released and
+Small, single-purpose Mac apps that live in the menu bar, or out of sight behind a shortcut. Each is its own app, released and
 updated on its own, built from one Swift package.
 
 | Utility                          | What it does                                                 |
@@ -11,7 +11,7 @@ updated on its own, built from one Swift package.
 
 Download `<Name>.zip` from the utility's latest [release](https://github.com/ckafrouni/mac-utilities/releases),
 unzip it and move the app to Applications. Apps are signed and notarized, and update themselves
-(the menu shows "Update to X.Y.Z…" when there's a new release).
+(apps with a menu show "Update to X.Y.Z…"; the others install it on their own).
 
 ## Develop
 
