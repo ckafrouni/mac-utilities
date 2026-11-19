@@ -6,6 +6,7 @@ updated on its own, built from one Swift package.
 | Utility                          | What it does                                                 |
 | -------------------------------- | ------------------------------------------------------------ |
 | [Calipers](Utilities/Calipers)   | Measure anything on screen, on every display (like PixelSnap). |
+| [Babel](Utilities/Babel)         | Translate everything foreign on screen into English, in place. |
 
 ## Install
 
@@ -15,7 +16,7 @@ open it and drag the app to Applications. Apps are signed and notarized, and upd
 
 ## Develop
 
-Needs Xcode (Swift 6) on macOS 14 or later.
+Needs Xcode (Swift 6) on macOS 14 or later; Babel needs Xcode 26.4 or later (its macOS 26.4 APIs).
 
 ```sh
 scripts/run.sh Calipers          # debug build, (re)started from build/Calipers.app

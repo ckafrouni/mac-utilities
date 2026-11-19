@@ -8,13 +8,17 @@ public enum UtilityApp {
   private static var delegate: NSApplicationDelegate?
 
   /// Starts the app and never returns. `items` is called each time the menu opens.
+  /// `onOpen` runs when the app is opened again while running (Finder, Spotlight),
+  /// `onURL` for each URL of a scheme the app's Info.plist declares.
   public static func run(
     symbol: String,
     items: @escaping @MainActor () -> [NSMenuItem],
-    onLaunch: @escaping @MainActor () -> Void = {}
+    onLaunch: @escaping @MainActor () -> Void = {},
+    onOpen: (@MainActor () -> Void)? = nil,
+    onURL: (@MainActor (URL) -> Void)? = nil
   ) -> Never {
     let app = NSApplication.shared
-    let delegate = Delegate(symbol: symbol, items: items, onLaunch: onLaunch)
+    let delegate = Delegate(symbol: symbol, items: items, onLaunch: onLaunch, onOpen: onOpen, onURL: onURL)
     self.delegate = delegate
     app.delegate = delegate
     app.setActivationPolicy(.accessory)
@@ -110,12 +114,28 @@ private final class Delegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
   let symbol: String
   let items: @MainActor () -> [NSMenuItem]
   let onLaunch: @MainActor () -> Void
+  let onOpen: (@MainActor () -> Void)?
+  let onURL: (@MainActor (URL) -> Void)?
   var statusItem: NSStatusItem?
 
-  init(symbol: String, items: @escaping @MainActor () -> [NSMenuItem], onLaunch: @escaping @MainActor () -> Void) {
+  init(
+    symbol: String, items: @escaping @MainActor () -> [NSMenuItem], onLaunch: @escaping @MainActor () -> Void,
+    onOpen: (@MainActor () -> Void)?, onURL: (@MainActor (URL) -> Void)?
+  ) {
     self.symbol = symbol
     self.items = items
     self.onLaunch = onLaunch
+    self.onOpen = onOpen
+    self.onURL = onURL
+  }
+
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    onOpen?()
+    return false
+  }
+
+  func application(_ application: NSApplication, open urls: [URL]) {
+    for url in urls { onURL?(url) }
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
