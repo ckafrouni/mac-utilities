@@ -23,7 +23,9 @@ running, building and releasing.
   window unless it needs one. Start one with `scripts/new-utility.sh <Name> [symbol]`.
 - Version comes from the release (`<id>-vX.Y.Z` tags); `Info.plist` says 0.0.0, which is what
   dev builds are (they don't update).
-- Swift 5 language mode, macOS 14+. UI code is `@MainActor`.
+- Swift 5 language mode, macOS 14+. UI code is `@MainActor`. A utility that needs newer APIs
+  marks its code `@available` and raises its own `LSMinimumSystemVersion` (Babel: 26.4), so the
+  package and the other utilities stay on 14.
 - Anything on screen works on every display: use global AppKit coordinates and each
   `NSScreen`'s own frame and backing scale; never assume the main screen.
 

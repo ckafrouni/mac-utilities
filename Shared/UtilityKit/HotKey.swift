@@ -4,19 +4,39 @@ import Carbon.HIToolbox
 /// A system-wide keyboard shortcut (Carbon hot keys: no Accessibility permission needed).
 @MainActor
 public enum HotKey {
+  /// A registered shortcut, to `unregister` later.
+  public struct Registration: Hashable {
+    fileprivate let id: UInt32
+  }
+
   private static var handlers: [UInt32: @MainActor () -> Void] = [:]
-  private static var refs: [EventHotKeyRef] = []
+  private static var refs: [UInt32: EventHotKeyRef] = [:]
+  private static var nextID: UInt32 = 0
   private static var installed = false
 
-  /// `keyCode` is a virtual key code such as `kVK_ANSI_1`.
-  public static func register(keyCode: Int, modifiers: NSEvent.ModifierFlags, action: @escaping @MainActor () -> Void) {
+  /// `keyCode` is a virtual key code such as `kVK_ANSI_1`. Returns nil if macOS refused it.
+  @discardableResult
+  public static func register(
+    keyCode: Int, modifiers: NSEvent.ModifierFlags, action: @escaping @MainActor () -> Void
+  ) -> Registration? {
     installHandler()
-    let id = UInt32(handlers.count + 1)
-    handlers[id] = action
+    nextID += 1
+    let id = nextID
     var ref: EventHotKeyRef?
     let hotKeyID = EventHotKeyID(signature: OSType(0x4F54_5452), id: id)  // "OTTR"
     let status = RegisterEventHotKey(UInt32(keyCode), carbonFlags(modifiers), hotKeyID, GetApplicationEventTarget(), 0, &ref)
-    if status == noErr, let ref { refs.append(ref) } else { NSLog("Couldn't register hot key \(keyCode): \(status)") }
+    guard status == noErr, let ref else {
+      NSLog("Couldn't register hot key \(keyCode): \(status)")
+      return nil
+    }
+    refs[id] = ref
+    handlers[id] = action
+    return Registration(id: id)
+  }
+
+  public static func unregister(_ registration: Registration) {
+    if let ref = refs.removeValue(forKey: registration.id) { UnregisterEventHotKey(ref) }
+    handlers[registration.id] = nil
   }
 
   private static func installHandler() {

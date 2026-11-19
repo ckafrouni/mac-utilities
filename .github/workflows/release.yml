@@ -39,7 +39,7 @@ permissions:
 jobs:
   release:
     name: Release ${{ inputs.utility || github.ref_name }}
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
     steps:
       - name: Only from the default branch
